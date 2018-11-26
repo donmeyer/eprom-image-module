@@ -242,7 +242,7 @@ def _get_filetype( filename ):
     elif ext == ".bin":
         return "binary"
     elif ext == ".hex":
-        # Hex can be raw hex or Interl hex. Take a look to find out.
+        # Hex can be raw hex or Intel hex. Take a look to find out.
         src = open( filename, 'r' )
         line = src.readline()
         src.close()
