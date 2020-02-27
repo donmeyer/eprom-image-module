@@ -28,7 +28,7 @@
 #
 #
 # ------------------------------------------
-# 
+#
 #
 # ------------------------------------------
 #
@@ -74,7 +74,7 @@ class EPROM:
     """
     def __init__( self, size, offset=0 ):
         """ The size is the size of the EPROM in bytes.
-        
+
         The offset is the address in the memory map where the EPROM will be addressed.
         """
         if (size % 1024) != 0:
@@ -85,8 +85,8 @@ class EPROM:
         self.size = size
         self.image = bytearray(b'\xff') * size
         self.binfile = bincopy.BinFile()
-        
-        
+
+
     def __repr__(self):
         chunks = []
         chunks.append( "Size %d  Offset %d  Cksum: %04X" % (self.size, self.offset, self.checksum()) )
@@ -95,12 +95,12 @@ class EPROM:
             # chunks.append("Address Range 0x%04X - 0x%04X   Length: 0x%04X (%4d)" % (seg[0], seg[1]-1, len(seg[2]), len(seg[2])) )
             chunks.append("Address Range 0x%04X - 0x%04X   Length: 0x%04X (%4d)" % (addr, addr+len(data)-1, len(data), len(data)) )
         return '\n'.join(chunks)
-        
-        
+
+
     def __cmp__( self, other ):
         return self.image == other.image
-        
-        
+
+
     def checksum(self):
         cs = sum(self.image) & 0xFFFF
         return cs
@@ -108,15 +108,15 @@ class EPROM:
 
     def chunks(self):
         """ This returns a chunk iterator. Chunks are tuples ( address, databytes )
-        
+
         The chunk addresses are zero-based. As in, all addresses are relative to the first byte of the image.
-        
+
         As in, if the image is a size of 256 bytes, the first address will be 0 and the last address will be 255 regardless of the offset.
         This is designed to support writing to an EPROM.
         """
         chunk_iter = ( (addr-self.offset,data) for addr,data in self.binfile.segments)
         return chunk_iter
-    
+
 
     #----------------------------------------------------------------
     #   Data Import
@@ -146,34 +146,39 @@ class EPROM:
         if end > self.size:
             raise Error( "Added bytes of length %d at addr 0x%04X would run past the end of the EPROM, whose size is %d" % (len(data), addr, self.size) )
         self.image[start:end] = data
-    
 
-    def readfile( self, filename ):
+
+    def readfile( self, filename, addr=0 ):
         """ Reads a hex file, adding it's contents to the EPROM.
         Valid file formats are Intel Hex, Motorola S-Records, Binary, and Raw Hex.
-        
+
+        The `addr` argument is only valid for binary and raw hex input files.
+
         Returns the file type as a string: "srecord", "hex", "intelhex", "binary"
         """
         # Step 1, what kind of file?
         ftype = _get_filetype( filename )
-        
+
         # Step 2, read the file into the BinFile
-        if ftype == "srecord":
-            self.binfile.add_srec_file( filename )
-        elif ftype == "binary":
-            self.binfile.add_binary_file( filename )
-        elif ftype == "intelhex":
-            self.binfile.add_ihex_file( filename  )
-        elif ftype == "hex":
-            bb = _import_hex( filename )
-            self.binfile.add_binary( bb )   
-        else:
-            raise Error( "Unknown file type for %s" % filename )
-            
-        # Step 3, Iterate through the BinFile addding the bytes to our full image.
+        try:
+            if ftype == "srecord":
+                self.binfile.add_srec_file( filename )
+            elif ftype == "binary":
+                self.binfile.add_binary_file( filename, addr )
+            elif ftype == "intelhex":
+                self.binfile.add_ihex_file( filename  )
+            elif ftype == "hex":
+                bb = _import_hex( filename )
+                self.binfile.add_binary( bb, addr )
+            else:
+                raise Error( "Unknown file type for %s" % filename )
+        except bincopy.Error as error:
+            raise Error(error)
+
+        # Step 3, Iterate through the BinFile adding the bytes to our full image.
         for addr,data in self.binfile.segments:
             self._add_bytes_to_image( addr, data )
-        
+
         return ftype
 
 
@@ -206,7 +211,7 @@ class EPROM:
         dest.write( self.binfile.as_binary() )
         dest.close()
 
-    
+
     def as_hexdump(self):
         """ The addresses used by the hex dump are absolute. As in, the first byte of the EPROM would be the offset address."""
         # self.binfile.fill()
@@ -279,27 +284,27 @@ def _import_hex( filename ):
         for num in m:
             b = int( num, 16 )
             bb.append( b )
-    
+
     return bb
-    
-    
+
+
 
 
 def scanfile( filename ):
     """ Reads a hex file
-    
+
     Valid file formats are Intel Hex, Motorola S-Records, Binary, and Raw Hex.
-    
+
     Returns a tuple of file type, start address, end address, length, list of chunks, hexdump.
     The file type is a string: "srecord", "hex", "intelhex", "binary"
     Each chunk in the list is a tuple of start address, end address, and length
     """
     # Step 1, what kind of file?
     ftype = _get_filetype( filename )
-    
+
     # Step 2, read the file into the BinFile
     binfile = bincopy.BinFile()
-    
+
     if ftype == "srecord":
         binfile.add_srec_file( filename )
     elif ftype == "binary":
@@ -308,10 +313,10 @@ def scanfile( filename ):
         binfile.add_ihex_file( filename  )
     elif ftype == "hex":
         bb = _import_hex( filename )
-        binfile.add_binary( bb )    
+        binfile.add_binary( bb )
     else:
         raise Error( "Unknown file type for %s" % filename )
-        
+
     # Step 3, Iterate through the BinFile creating the chunk list
     chunks = []
     for addr,data in binfile.segments:
@@ -320,13 +325,13 @@ def scanfile( filename ):
         se = ss + sl - 1
         chunk = ( ss, se, sl )
         chunks.append(chunk)
-    
+
     astart = binfile.minimum_address
     aend = binfile.maximum_address - 1
     alen = aend - astart + 1
-    
+
     hd = binfile.as_hexdump()
-        
+
     return ( ftype, astart, aend, alen, chunks, hd )
 
 
@@ -337,7 +342,7 @@ def scanfile( filename ):
 
 def main( argv ):
     """This just does some simple unit testing"""
-    
+
     print("A 16-byte EPROM image with 2 bytes starting at 0x0006")
     eprom = EPROM(16)
     print(eprom)
@@ -346,7 +351,7 @@ def main( argv ):
     print( eprom.as_hexdump() )
 
     print( "------------------------------------------------")
-    print("bitload.hex (Intel) in 512 byte EPROM image with 2 bytes added at 0x0100")    
+    print("bitload.hex (Intel) in 512 byte EPROM image with 2 bytes added at 0x0100")
     eprom = EPROM(512)
     eprom.readfile( "epromimage-samples/bitload.hex" )
     eprom.add_bytes( 256, b'ab' )
