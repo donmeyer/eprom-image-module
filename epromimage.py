@@ -124,19 +124,22 @@ class EPROM:
 
     def add_bytes( self, addr, data ):
         """Add bytes to the EPROM image.
-        
+
         An exception will be raised if a byte is written to twice.
         addr - Absolute address. The first legal address is the same as the EPRTOM offset.
         data - A byte array.
         """
-        self.binfile.add_binary( data, addr )
+        try:
+            self.binfile.add_binary( data, addr )
+        except bincopy.Error as error:
+            raise Error( "Error adding bytes to the EPROM image at addr 0x%04X" % (addr) )
         self._add_bytes_to_image( addr, data )
 
 
     def _add_bytes_to_image( self, addr, data ):
         """
         This adds the bytes in the bytearray 'data' to the image array.
-        
+
         Address is absolute, not relative to the EPROM start. (unless the offset is zero of course)
         """
         if addr < self.offset:
