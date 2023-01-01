@@ -214,7 +214,7 @@ class EPROM:
 
 
     def write_file_as_binary(self,filename):
-        dest = open( filename, 'w' )
+        dest = open( filename, 'wb' )
         dest.write( self.binfile.as_binary() )
         dest.close()
 
