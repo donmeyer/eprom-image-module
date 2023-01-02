@@ -1,0 +1,10 @@
+{
+  "eablokker.tabsSidebar.config.customKindGroupsOrder" : [
+    "plaintext",
+    "python"
+  ],
+  "eablokker.tabsSidebar.config.customTabOrder" : [
+    "\/Users\/don\/Code\/Cosmac 1802\/eprom-image\/license.txt",
+    "\/Users\/don\/Code\/Cosmac 1802\/eprom-image\/epromimage.py"
+  ]
+}
