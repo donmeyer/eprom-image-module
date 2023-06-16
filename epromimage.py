@@ -194,16 +194,16 @@ class EPROM:
         dest.write(self.binfile.as_srec())
         dest.close()
 
-    def write_file_as_raw_hex(self, filename):
+    def write_file_as_raw_hex(self, filename, offset=0):
         dest = open(filename, 'w')
-        data = self.binfile.as_binary()
+        data = self.binfile.as_binary(minimum_address=offset)
         buf = self._data_to_hex_strings(data)
         dest.write(buf)
         dest.close()
 
-    def write_file_as_binary(self, filename):
+    def write_file_as_binary(self, filename, offset=0):
         dest = open(filename, 'wb')
-        dest.write(self.binfile.as_binary())
+        dest.write(self.binfile.as_binary(minimum_address=offset))
         dest.close()
 
     def write_file_as_c_src(self, filename):
